@@ -5,8 +5,10 @@ import (
 )
 
 var (
-	ErrEmptyTrie   = errors.New("empty trie")
-	ErrEmptyKey    = errors.New("empty key") // empty key is not allowed
+	ErrEmptyTrie = errors.New("empty trie")
+
+	// ErrEmptyKey empty key is not allowed
+	ErrEmptyKey    = errors.New("empty key")
 	ErrKeyNotFound = errors.New("key not found")
 	ErrKeyExists   = errors.New("key exists")
 )
