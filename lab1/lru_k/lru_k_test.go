@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func TestLRUKNode_SetEvictable(t *testing.T) {
-	node := LRUKNode{}
+func TestNode_SetEvictable(t *testing.T) {
+	node := Node{}
 	node.SetEvictable(true)
 	if node.isEvictable != true {
 		t.Error("evictable should be true")

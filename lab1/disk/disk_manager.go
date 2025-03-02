@@ -1,7 +1,7 @@
 package disk
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"sync"
 )
@@ -14,7 +14,7 @@ const (
 	FilePath = "../data/"
 )
 
-type DiskManager struct {
+type Manager struct {
 	dbFile       *os.File
 	logFile      *os.File
 	dbFileName   string
@@ -24,20 +24,20 @@ type DiskManager struct {
 	pageCapacity int
 }
 
-// NewDiskManager 构造函数
-func NewDiskManager(dbFileName string) (*DiskManager, error) {
+// NewManager 构造函数
+func NewManager(dbFileName string) (*Manager, error) {
 	dbFile, err := os.OpenFile(FilePath+dbFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		return nil, errors.New("failed to open database file")
+		return nil, fmt.Errorf("failed to open db file: %v", err)
 	}
 
 	logFileName := dbFileName + ".log"
 	logFile, err := os.OpenFile(FilePath+logFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		return nil, errors.New("failed to open log file")
+		return nil, fmt.Errorf("failed to open log file: %v", err)
 	}
 
-	return &DiskManager{
+	return &Manager{
 		dbFile:      dbFile,
 		logFile:     logFile,
 		dbFileName:  dbFileName,
@@ -47,9 +47,9 @@ func NewDiskManager(dbFileName string) (*DiskManager, error) {
 }
 
 // WritePage 将数据写入文件
-func (dm *DiskManager) WritePage(pageID int, pageData []byte) error {
+func (dm *Manager) WritePage(pageID int, pageData []byte) error {
 	if len(pageData) != PageSize {
-		return errors.New("page data size dismatch")
+		return fmt.Errorf("invalid page size")
 	}
 
 	dm.mu.Lock()
@@ -58,7 +58,7 @@ func (dm *DiskManager) WritePage(pageID int, pageData []byte) error {
 	offset := int64(pageID) * PageSize
 	_, err := dm.dbFile.WriteAt(pageData, offset)
 	if err != nil {
-		return errors.New("failed to write page data: " + err.Error())
+		return fmt.Errorf("write page error: %v", err)
 	}
 
 	dm.numWrites++
@@ -66,33 +66,38 @@ func (dm *DiskManager) WritePage(pageID int, pageData []byte) error {
 }
 
 // ReadPage 读取页
-func (dm *DiskManager) ReadPage(pageID int, pageData []byte) error {
+func (dm *Manager) ReadPage(pageID int, pageData []byte) error {
 	if len(pageData) != PageSize {
-		return errors.New("page data size dismatch")
+		return fmt.Errorf("invalid page size")
 	}
 
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
 	offset := int64(pageID) * PageSize
-	_, err := dm.dbFile.ReadAt(pageData, offset)
+	n, err := dm.dbFile.ReadAt(pageData, offset)
 	if err != nil {
-		return errors.New("failed to read db file: " + err.Error())
+		return fmt.Errorf("read page error: %v", err)
+	}
+
+	if n < PageSize {
+		return fmt.Errorf("incomplete page read: expected %d bytes, got %d", PageSize, n)
 	}
 
 	return nil
 }
 
 // ShutDown 关闭文件流
-func (dm *DiskManager) ShutDown() error {
+func (dm *Manager) ShutDown() error {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
 	if err := dm.dbFile.Close(); err != nil {
-		return errors.New("failed to close db file: " + err.Error())
+		return fmt.Errorf("failed to close db file: %v", err)
 	}
+
 	if err := dm.logFile.Close(); err != nil {
-		return errors.New("failed to close log file: " + err.Error())
+		return fmt.Errorf("failed to close log file: %v", err)
 	}
 
 	return nil

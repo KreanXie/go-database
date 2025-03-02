@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-type LRUKNode struct {
+type Node struct {
 	history     *list.List
 	k           int
 	frameId     int
 	isEvictable bool
 }
 
-func (l *LRUKNode) SetEvictable(setEvictable bool) {
+func (l *Node) SetEvictable(setEvictable bool) {
 	l.isEvictable = setEvictable
 }
 
-type LRUKReplacer struct {
-	nodeStore    map[int]*LRUKNode
+type Replacer struct {
+	nodeStore    map[int]*Node
 	timeStamp    int
 	curSize      int
 	replacerSize int
@@ -26,9 +26,9 @@ type LRUKReplacer struct {
 	mu           *sync.Mutex
 }
 
-func NewLRUKReplacer(numFrames, k int) *LRUKReplacer {
-	return &LRUKReplacer{
-		nodeStore:    make(map[int]*LRUKNode),
+func NewReplacer(numFrames, k int) *Replacer {
+	return &Replacer{
+		nodeStore:    make(map[int]*Node),
 		timeStamp:    int(time.Now().Unix()),
 		curSize:      0,
 		replacerSize: numFrames,
@@ -37,17 +37,17 @@ func NewLRUKReplacer(numFrames, k int) *LRUKReplacer {
 	}
 }
 
-func (lru *LRUKReplacer) Evict(frameId int) error {
+func (lru *Replacer) Evict(frameId int) (int, error) {
 	// error handle
 	switch {
 	case lru.nodeStore == nil:
 		// uninitialized lru replacer
 
-		return ErrUnInitialized
+		return -1, ErrUnInitialized
 	case frameId < 0 || frameId >= lru.replacerSize:
 		// frameId should not be greater than replacerSize
 
-		return ErrInvalidFrameId
+		return -1, ErrInvalidFrameId
 	}
 
 	lru.mu.Lock()
@@ -69,16 +69,16 @@ func (lru *LRUKReplacer) Evict(frameId int) error {
 	}
 
 	if earliestFrameId == -1 {
-		return ErrNoEvictableFrame
+		return -1, ErrNoEvictableFrame
 	}
 
 	delete(lru.nodeStore, earliestFrameId)
 	lru.curSize--
 
-	return nil
+	return earliestFrameId, nil
 }
 
-func (lru *LRUKReplacer) RecordAccess(frameId int, accessType int) error {
+func (lru *Replacer) RecordAccess(frameId int, accessType int) error {
 	// error handle
 	switch {
 	case lru.nodeStore == nil:
@@ -101,7 +101,7 @@ func (lru *LRUKReplacer) RecordAccess(frameId int, accessType int) error {
 
 	// if this frame is not seen.
 	if _, ok := lru.nodeStore[frameId]; !ok {
-		lru.nodeStore[frameId] = &LRUKNode{
+		lru.nodeStore[frameId] = &Node{
 			history:     list.New(),
 			k:           lru.k,
 			frameId:     frameId,
@@ -121,7 +121,7 @@ func (lru *LRUKReplacer) RecordAccess(frameId int, accessType int) error {
 	return nil
 }
 
-func (lru *LRUKReplacer) SetEvictable(frameId int, setEvictable bool) error {
+func (lru *Replacer) SetEvictable(frameId int, setEvictable bool) error {
 	// error handle
 	switch {
 	case lru.nodeStore == nil:
@@ -147,7 +147,7 @@ func (lru *LRUKReplacer) SetEvictable(frameId int, setEvictable bool) error {
 	return nil
 }
 
-func (lru *LRUKReplacer) Remove(frameId int) error {
+func (lru *Replacer) Remove(frameId int) error {
 	// error handle
 	switch {
 	case lru.nodeStore == nil:
@@ -174,6 +174,6 @@ func (lru *LRUKReplacer) Remove(frameId int) error {
 	return nil
 }
 
-func (lru *LRUKReplacer) Size() int {
+func (lru *Replacer) Size() int {
 	return lru.curSize
 }
