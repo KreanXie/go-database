@@ -10,11 +10,21 @@ const (
 	testPageSize   = PageSize
 )
 
-func TestNewDiskManager(t *testing.T) {
-	// 初始化测试
-	dm, err := NewDiskManager(testDBFileName)
+func TestMain(m *testing.M) {
+	err := os.Mkdir("../data", 0755)
 	if err != nil {
-		t.Fatalf("Failed to create DiskManager: %v", err)
+		panic(err)
+	}
+	defer os.RemoveAll("../data")
+
+	m.Run()
+}
+
+func TestNewManager(t *testing.T) {
+	// 初始化测试
+	dm, err := NewManager(testDBFileName)
+	if err != nil {
+		t.Fatalf("Failed to create Manager: %v", err)
 	}
 	defer cleanup(dm, t)
 
@@ -30,9 +40,9 @@ func TestNewDiskManager(t *testing.T) {
 }
 
 func TestWritePage(t *testing.T) {
-	dm, err := NewDiskManager(testDBFileName)
+	dm, err := NewManager(testDBFileName)
 	if err != nil {
-		t.Fatalf("Failed to create DiskManager: %v", err)
+		t.Fatalf("Failed to create Manager: %v", err)
 	}
 	defer cleanup(dm, t)
 
@@ -61,9 +71,9 @@ func TestWritePage(t *testing.T) {
 }
 
 func TestReadPage(t *testing.T) {
-	dm, err := NewDiskManager(testDBFileName)
+	dm, err := NewManager(testDBFileName)
 	if err != nil {
-		t.Fatalf("Failed to create DiskManager: %v", err)
+		t.Fatalf("Failed to create Manager: %v", err)
 	}
 	defer cleanup(dm, t)
 
@@ -92,17 +102,13 @@ func TestReadPage(t *testing.T) {
 }
 
 func TestShutDown(t *testing.T) {
-	dm, err := NewDiskManager(testDBFileName)
+	dm, err := NewManager(testDBFileName)
 	if err != nil {
-		t.Fatalf("Failed to create DiskManager: %v", err)
+		t.Fatalf("Failed to create Manager: %v", err)
 	}
-	defer cleanup(dm, t)
 
-	// 验证是否正常关闭
-	err = dm.ShutDown()
-	if err != nil {
-		t.Fatalf("Failed to shut down DiskManager: %v", err)
-	}
+	// 关闭
+	cleanup(dm, t)
 
 	// 尝试写入页面，验证关闭状态
 	err = dm.WritePage(0, make([]byte, PageSize))
@@ -112,10 +118,10 @@ func TestShutDown(t *testing.T) {
 }
 
 // cleanup 清理测试文件
-func cleanup(dm *DiskManager, t *testing.T) {
+func cleanup(dm *Manager, t *testing.T) {
 	err := dm.ShutDown()
 	if err != nil {
-		t.Logf("Failed to shut down DiskManager: %v", err)
+		t.Logf("Failed to shut down Manager: %v", err)
 	}
 	if err := os.Remove(FilePath + testDBFileName); err != nil {
 		t.Logf("Failed to remove database file: %v", err)

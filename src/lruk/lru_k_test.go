@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func TestLRUKNode_SetEvictable(t *testing.T) {
-	node := LRUKNode{}
+func TestNode_SetEvictable(t *testing.T) {
+	node := Node{}
 	node.SetEvictable(true)
 	if node.isEvictable != true {
 		t.Error("evictable should be true")
@@ -15,7 +15,7 @@ func TestLRUKNode_SetEvictable(t *testing.T) {
 }
 
 func TestNewLRUKReplacer(t *testing.T) {
-	lruKReplacer := NewLRUKReplacer(10, 10)
+	lruKReplacer := NewReplacer(10, 10)
 	if lruKReplacer == nil {
 		t.Error("lruKReplacer should not be nil")
 	}
@@ -26,48 +26,48 @@ func TestLRUKReplacer_Evict(t *testing.T) {
 	numFrames, k := 5, 3
 
 	t.Run("uninitialized", func(t *testing.T) {
-		lruKReplacer := new(LRUKReplacer)
-		err := lruKReplacer.Evict(0)
+		lruKReplacer := new(Replacer)
+		_, err := lruKReplacer.Evict(0)
 		if !errors.Is(err, ErrUnInitialized) {
 			t.Error("should return ErrUnInitialized")
 		}
 	})
 
 	t.Run("invalid frame id", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
-		err := lruKReplacer.Evict(-1)
+		lruKReplacer := NewReplacer(numFrames, k)
+		_, err := lruKReplacer.Evict(-1)
 		if !errors.Is(err, ErrInvalidFrameId) {
 			t.Error("should return ErrInvalidFrameId")
 		}
 
-		err = lruKReplacer.Evict(numFrames)
+		_, err = lruKReplacer.Evict(numFrames)
 		if !errors.Is(err, ErrInvalidFrameId) {
 			t.Error("should return ErrInvalidFrameId")
 		}
 	})
 
 	t.Run("no evictable frame", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
-		err := lruKReplacer.Evict(0)
+		lruKReplacer := NewReplacer(numFrames, k)
+		_, err := lruKReplacer.Evict(0)
 		if !errors.Is(err, ErrNoEvictableFrame) {
 			t.Error("should return ErrNoEvictableFrame")
 		}
 	})
 
 	t.Run("no enough data", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 		err := lruKReplacer.RecordAccess(0, 0)
 		if err != nil {
 			t.Error("should no error")
 		}
-		err = lruKReplacer.Evict(0)
+		_, err = lruKReplacer.Evict(0)
 		if !errors.Is(err, ErrNoEvictableFrame) {
 			t.Error("should return ErrNoEvictableFrame")
 		}
 	})
 
 	t.Run("normal case", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 		for i := 0; i < numFrames; i++ {
 			for j := 0; j < k; j++ {
 				err := lruKReplacer.RecordAccess(i, 0)
@@ -83,7 +83,7 @@ func TestLRUKReplacer_Evict(t *testing.T) {
 
 		// sleep for a second in case the timestamp conflict
 		time.Sleep(1 * time.Second)
-		err := lruKReplacer.Evict(0)
+		_, err := lruKReplacer.Evict(0)
 		if err != nil {
 			t.Error(err)
 		}
@@ -95,7 +95,7 @@ func TestLRUKReplacer_RecordAccess(t *testing.T) {
 	numFrames, k := 5, 3
 
 	t.Run("uninitialized", func(t *testing.T) {
-		lruKReplacer := new(LRUKReplacer)
+		lruKReplacer := new(Replacer)
 		err := lruKReplacer.RecordAccess(0, 0)
 		if !errors.Is(err, ErrUnInitialized) {
 			t.Error("should return ErrUnInitialized")
@@ -103,7 +103,7 @@ func TestLRUKReplacer_RecordAccess(t *testing.T) {
 	})
 
 	t.Run("invalid frame id", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 
 		err := lruKReplacer.RecordAccess(-1, 0)
 		if !errors.Is(err, ErrInvalidFrameId) {
@@ -112,7 +112,7 @@ func TestLRUKReplacer_RecordAccess(t *testing.T) {
 	})
 
 	t.Run("invalid access type", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 
 		err := lruKReplacer.RecordAccess(0, -1)
 		if !errors.Is(err, ErrUnknownAccessType) {
@@ -121,7 +121,7 @@ func TestLRUKReplacer_RecordAccess(t *testing.T) {
 	})
 
 	t.Run("access times greater than k", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 
 		for i := 0; i < k; i++ {
 			err := lruKReplacer.RecordAccess(0, 0)
@@ -141,7 +141,7 @@ func TestLRUKReplacer_SetEvictable(t *testing.T) {
 	numFrames, k := 5, 3
 
 	t.Run("uninitialized", func(t *testing.T) {
-		lruKReplacer := new(LRUKReplacer)
+		lruKReplacer := new(Replacer)
 		err := lruKReplacer.SetEvictable(0, true)
 		if !errors.Is(err, ErrUnInitialized) {
 			t.Error("should return ErrUnInitialized")
@@ -149,7 +149,7 @@ func TestLRUKReplacer_SetEvictable(t *testing.T) {
 	})
 
 	t.Run("invalid frame id", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 		err := lruKReplacer.SetEvictable(-1, true)
 		if !errors.Is(err, ErrInvalidFrameId) {
 			t.Error("should return ErrInvalidFrameId")
@@ -162,7 +162,7 @@ func TestLRUKReplacer_SetEvictable(t *testing.T) {
 	})
 
 	t.Run("normal case", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 
 		err := lruKReplacer.RecordAccess(0, 0)
 		if err != nil {
@@ -180,7 +180,7 @@ func TestLRUKReplacer_Remove(t *testing.T) {
 	numFrames, k := 5, 3
 
 	t.Run("uninitialized", func(t *testing.T) {
-		lruKReplacer := new(LRUKReplacer)
+		lruKReplacer := new(Replacer)
 		err := lruKReplacer.Remove(0)
 		if !errors.Is(err, ErrUnInitialized) {
 			t.Error("should return ErrUnInitialized")
@@ -188,7 +188,7 @@ func TestLRUKReplacer_Remove(t *testing.T) {
 	})
 
 	t.Run("invalid frame id", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 		err := lruKReplacer.Remove(-1)
 		if !errors.Is(err, ErrInvalidFrameId) {
 			t.Error("should return ErrInvalidFrameId")
@@ -196,7 +196,7 @@ func TestLRUKReplacer_Remove(t *testing.T) {
 	})
 
 	t.Run("non-evictable frame", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 
 		err := lruKReplacer.RecordAccess(0, 0)
 		if err != nil {
@@ -210,7 +210,7 @@ func TestLRUKReplacer_Remove(t *testing.T) {
 	})
 
 	t.Run("normal case", func(t *testing.T) {
-		lruKReplacer := NewLRUKReplacer(numFrames, k)
+		lruKReplacer := NewReplacer(numFrames, k)
 
 		err := lruKReplacer.RecordAccess(0, 0)
 		if err != nil {
@@ -232,7 +232,7 @@ func TestLRUKReplacer_Remove(t *testing.T) {
 func TestLRUKReplacer_Size(t *testing.T) {
 	numFrames, k := 5, 3
 
-	lruKReplacer := NewLRUKReplacer(numFrames, k)
+	lruKReplacer := NewReplacer(numFrames, k)
 
 	if lruKReplacer.Size() != 0 {
 		t.Error("lruKReplacer.Size() should be 0")
