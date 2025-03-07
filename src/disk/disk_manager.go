@@ -15,13 +15,13 @@ const (
 )
 
 type Manager struct {
-	dbFile       *os.File
-	logFile      *os.File
-	dbFileName   string
-	logFileName  string
+	DBFile       *os.File
+	LogFile      *os.File
+	DBFileName   string
+	LogFileName  string
 	mu           sync.Mutex
-	numWrites    int
-	pageCapacity int
+	NumWrites    int
+	PageCapacity int
 }
 
 // NewManager 构造函数
@@ -38,10 +38,10 @@ func NewManager(dbFileName string) (*Manager, error) {
 	}
 
 	return &Manager{
-		dbFile:      dbFile,
-		logFile:     logFile,
-		dbFileName:  dbFileName,
-		logFileName: logFileName,
+		DBFile:      dbFile,
+		LogFile:     logFile,
+		DBFileName:  dbFileName,
+		LogFileName: logFileName,
 		mu:          sync.Mutex{},
 	}, nil
 }
@@ -56,12 +56,12 @@ func (dm *Manager) WritePage(pageID int, pageData []byte) error {
 	defer dm.mu.Unlock()
 
 	offset := int64(pageID) * PageSize
-	_, err := dm.dbFile.WriteAt(pageData, offset)
+	_, err := dm.DBFile.WriteAt(pageData, offset)
 	if err != nil {
 		return fmt.Errorf("write page error: %v", err)
 	}
 
-	dm.numWrites++
+	dm.NumWrites++
 	return nil
 }
 
@@ -75,7 +75,7 @@ func (dm *Manager) ReadPage(pageID int, pageData []byte) error {
 	defer dm.mu.Unlock()
 
 	offset := int64(pageID) * PageSize
-	n, err := dm.dbFile.ReadAt(pageData, offset)
+	n, err := dm.DBFile.ReadAt(pageData, offset)
 	if err != nil {
 		return fmt.Errorf("read page error: %v", err)
 	}
@@ -92,11 +92,11 @@ func (dm *Manager) ShutDown() error {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
-	if err := dm.dbFile.Close(); err != nil {
+	if err := dm.DBFile.Close(); err != nil {
 		return fmt.Errorf("failed to close db file: %v", err)
 	}
 
-	if err := dm.logFile.Close(); err != nil {
+	if err := dm.LogFile.Close(); err != nil {
 		return fmt.Errorf("failed to close log file: %v", err)
 	}
 
