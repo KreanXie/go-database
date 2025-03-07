@@ -1,4 +1,4 @@
-package table
+package column
 
 type Column struct {
 	Name string
