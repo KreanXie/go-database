@@ -116,9 +116,6 @@ func (m *Manager) FlushPage(pageID int) error {
 		return fmt.Errorf("page %d not found", pageID)
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	// 如果是脏页，则将其写回磁盘
 	if p.IsDirty {
 		if err := m.DiskManager.WritePage(int(pageID), p.Data); err != nil {
