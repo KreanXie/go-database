@@ -1,19 +1,15 @@
-package bufferpool
+package internal
 
 import (
 	"fmt"
 	"sync"
-
-	"go-database/src/disk"
-	"go-database/src/lruk"
-	"go-database/src/page"
 )
 
-// Manager 缓冲池管理器
-type Manager struct {
-	DiskManager *disk.Manager
-	Replacer    *lruk.Replacer
-	PageTable   map[int]*page.Page
+// BufferPoolManager 缓冲池管理器
+type BufferPoolManager struct {
+	DiskManager *DiskManager
+	Replacer    *Replacer
+	PageTable   map[int]*Page
 	PinnedPages map[int]int
 	PoolSize    int
 	PageSize    int
@@ -21,12 +17,12 @@ type Manager struct {
 }
 
 // NewManager 创建一个新的 Manager 实例
-func NewManager(diskManager *disk.Manager, poolSize, DefaultPageSize, k int) *Manager {
-	replacer := lruk.NewReplacer(poolSize, k)
-	return &Manager{
+func NewBufferPoolManager(diskManager *DiskManager, poolSize, DefaultPageSize, k int) *BufferPoolManager {
+	replacer := NewReplacer(poolSize, k)
+	return &BufferPoolManager{
 		DiskManager: diskManager,
 		Replacer:    replacer,
-		PageTable:   make(map[int]*page.Page),
+		PageTable:   make(map[int]*Page),
 		PinnedPages: make(map[int]int),
 		PoolSize:    poolSize,
 		PageSize:    DefaultPageSize,
@@ -34,7 +30,7 @@ func NewManager(diskManager *disk.Manager, poolSize, DefaultPageSize, k int) *Ma
 }
 
 // FetchPage 从缓冲池或磁盘中获取指定页面
-func (m *Manager) FetchPage(pageID int) (*page.Page, error) {
+func (m *BufferPoolManager) FetchPage(pageID int) (*Page, error) {
 	// 尝试从缓冲池获取page
 	if p, ok := m.PageTable[pageID]; ok {
 		return p, nil
@@ -51,9 +47,9 @@ func (m *Manager) FetchPage(pageID int) (*page.Page, error) {
 	}
 
 	// 创建一个新page加入到缓冲池
-	p := &page.Page{
+	p := &Page{
 		PageID: pageID,
-		Data:   make([]byte, page.DefaultPageSize),
+		Data:   make([]byte, DefaultPageSize),
 	}
 
 	// 从磁盘中读取数据
@@ -75,7 +71,7 @@ func (m *Manager) FetchPage(pageID int) (*page.Page, error) {
 
 // UnpinPage 解除固定页面并处理相关的脏页面写回
 // 通常在FetchPage，并结束对页的操作之后，需要UnpinPage
-func (m *Manager) UnpinPage(pageID int, isDirty bool) error {
+func (m *BufferPoolManager) UnpinPage(pageID int, isDirty bool) error {
 	// 确认该页面是否存在
 	p, ok := m.PageTable[pageID]
 	if !ok {
@@ -109,7 +105,7 @@ func (m *Manager) UnpinPage(pageID int, isDirty bool) error {
 }
 
 // FlushPage 将指定页面的数据刷新到磁盘
-func (m *Manager) FlushPage(pageID int) error {
+func (m *BufferPoolManager) FlushPage(pageID int) error {
 	// 确认该页面是否存在
 	p, ok := m.PageTable[pageID]
 	if !ok {
@@ -129,15 +125,15 @@ func (m *Manager) FlushPage(pageID int) error {
 }
 
 // NewPage 创建一个新页到缓冲池，并放回id
-func (m *Manager) NewPage() (int, error) {
+func (m *BufferPoolManager) NewPage() (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	pageID := int(len(m.PageTable) + 1)
 
-	p := &page.Page{
+	p := &Page{
 		PageID: pageID,
-		Data:   make([]byte, page.DefaultPageSize),
+		Data:   make([]byte, DefaultPageSize),
 	}
 
 	m.PageTable[pageID] = p
@@ -146,7 +142,7 @@ func (m *Manager) NewPage() (int, error) {
 }
 
 // DeletePage 从缓冲池中删除页
-func (m *Manager) DeletePage(pageID int) error {
+func (m *BufferPoolManager) DeletePage(pageID int) error {
 	// 确认该页是否存在
 	p, ok := m.PageTable[pageID]
 	if !ok {
@@ -174,7 +170,7 @@ func (m *Manager) DeletePage(pageID int) error {
 }
 
 // FlushAllPages 刷新所有的脏页到磁盘
-func (m *Manager) FlushAllPages() error {
+func (m *BufferPoolManager) FlushAllPages() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -190,7 +186,7 @@ func (m *Manager) FlushAllPages() error {
 }
 
 // evictPage 驱逐一个页
-func (m *Manager) evictPage() error {
+func (m *BufferPoolManager) evictPage() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

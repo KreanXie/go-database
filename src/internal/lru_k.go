@@ -1,4 +1,4 @@
-package lruk
+package internal
 
 import (
 	"container/list"
@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-type Node struct {
+type LRUKNode struct {
 	history     *list.List
 	k           int
 	frameId     int
 	isEvictable bool
 }
 
-func (l *Node) SetEvictable(setEvictable bool) {
+func (l *LRUKNode) SetEvictable(setEvictable bool) {
 	l.isEvictable = setEvictable
 }
 
 type Replacer struct {
-	nodeStore    map[int]*Node
+	nodeStore    map[int]*LRUKNode
 	timeStamp    int
 	curSize      int
 	replacerSize int
@@ -28,7 +28,7 @@ type Replacer struct {
 
 func NewReplacer(numFrames, k int) *Replacer {
 	return &Replacer{
-		nodeStore:    make(map[int]*Node),
+		nodeStore:    make(map[int]*LRUKNode),
 		timeStamp:    int(time.Now().Unix()),
 		curSize:      0,
 		replacerSize: numFrames,
@@ -101,7 +101,7 @@ func (lru *Replacer) RecordAccess(frameId int, accessType int) error {
 
 	// if this frame is not seen.
 	if _, ok := lru.nodeStore[frameId]; !ok {
-		lru.nodeStore[frameId] = &Node{
+		lru.nodeStore[frameId] = &LRUKNode{
 			history:     list.New(),
 			k:           lru.k,
 			frameId:     frameId,

@@ -1,4 +1,4 @@
-package disk
+package internal
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ const (
 	FilePath = "../data/"
 )
 
-type Manager struct {
+type DiskManager struct {
 	DBFile       *os.File
 	LogFile      *os.File
 	DBFileName   string
@@ -24,8 +24,8 @@ type Manager struct {
 	PageCapacity int
 }
 
-// NewManager 构造函数
-func NewManager(dbFileName string) (*Manager, error) {
+// NewDiskManager 构造函数
+func NewDiskManager(dbFileName string) (*DiskManager, error) {
 	dbFile, err := os.OpenFile(FilePath+dbFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db file: %v", err)
@@ -37,7 +37,7 @@ func NewManager(dbFileName string) (*Manager, error) {
 		return nil, fmt.Errorf("failed to open log file: %v", err)
 	}
 
-	return &Manager{
+	return &DiskManager{
 		DBFile:      dbFile,
 		LogFile:     logFile,
 		DBFileName:  dbFileName,
@@ -47,7 +47,7 @@ func NewManager(dbFileName string) (*Manager, error) {
 }
 
 // WritePage 将数据写入文件
-func (dm *Manager) WritePage(pageID int, pageData []byte) error {
+func (dm *DiskManager) WritePage(pageID int, pageData []byte) error {
 	if len(pageData) != PageSize {
 		return fmt.Errorf("invalid page size")
 	}
@@ -66,7 +66,7 @@ func (dm *Manager) WritePage(pageID int, pageData []byte) error {
 }
 
 // ReadPage 读取页
-func (dm *Manager) ReadPage(pageID int, pageData []byte) error {
+func (dm *DiskManager) ReadPage(pageID int, pageData []byte) error {
 	if len(pageData) != PageSize {
 		return fmt.Errorf("invalid page size")
 	}
@@ -88,7 +88,7 @@ func (dm *Manager) ReadPage(pageID int, pageData []byte) error {
 }
 
 // ShutDown 关闭文件流
-func (dm *Manager) ShutDown() error {
+func (dm *DiskManager) ShutDown() error {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 

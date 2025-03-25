@@ -1,4 +1,4 @@
-package lruk
+package internal
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestNode_SetEvictable(t *testing.T) {
-	node := Node{}
+	node := LRUKNode{}
 	node.SetEvictable(true)
 	if node.isEvictable != true {
 		t.Error("evictable should be true")

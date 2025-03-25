@@ -1,10 +1,8 @@
-package page
+package internal
 
-import (
-	"go-database/src/disk"
-)
+import "sync"
 
-const DefaultPageSize = disk.PageSize
+const DefaultPageSize = PageSize
 
 // Page 页面结构
 type Page struct {
@@ -12,4 +10,5 @@ type Page struct {
 	Data     []byte
 	IsDirty  bool
 	PinCount int
+	mu       sync.Mutex
 }

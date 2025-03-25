@@ -1,27 +1,27 @@
-package trie
+package internal
 
 // Trie class
 type Trie struct {
-	root *Node
+	root *TrieNode
 }
 
-// Node is a Trie Node
-type Node struct {
+// TrieNode is a Trie Node
+type TrieNode struct {
 	key byte
 
 	// if val is nil, we consider it's not the end of the key
 	// in someways, this can replace isEnd attribute
 	val    any
-	childs map[byte]*Node
+	childs map[byte]*TrieNode
 }
 
 // NewTrie returns an initialized trie
 func NewTrie() *Trie {
 	return &Trie{
-		root: &Node{
+		root: &TrieNode{
 			key:    ' ',
 			val:    nil,
-			childs: make(map[byte]*Node),
+			childs: make(map[byte]*TrieNode),
 		},
 	}
 }
@@ -39,10 +39,10 @@ func (t *Trie) Put(key string, val any) error {
 	i := 0
 	for i < len(key) {
 		if _, ok := cur.childs[key[i]]; !ok {
-			cur.childs[key[i]] = &Node{
+			cur.childs[key[i]] = &TrieNode{
 				key:    key[i],
 				val:    nil,
-				childs: make(map[byte]*Node),
+				childs: make(map[byte]*TrieNode),
 			}
 		}
 		cur = cur.childs[key[i]]

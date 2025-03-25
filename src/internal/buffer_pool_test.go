@@ -1,13 +1,11 @@
-package bufferpool
+package internal
 
 import (
 	"os"
 	"testing"
-
-	"go-database/src/disk"
 )
 
-func setupDiskManager(t *testing.T) *disk.Manager {
+func setupDiskManager(t *testing.T) *DiskManager {
 	// 创建一个临时文件来模拟磁盘文件
 	dbFileName := "test_db.db"
 	logFileName := "test_log.db"
@@ -24,7 +22,7 @@ func setupDiskManager(t *testing.T) *disk.Manager {
 	}
 	logFile.Truncate(4096 * 10)
 
-	dm := &disk.Manager{
+	dm := &DiskManager{
 		DBFile:      dbFile,
 		LogFile:     logFile,
 		DBFileName:  dbFileName,
@@ -33,9 +31,15 @@ func setupDiskManager(t *testing.T) *disk.Manager {
 	return dm
 }
 
-func cleanupDiskManager(dm *disk.Manager) {
-	os.Remove(dm.DBFileName)
-	os.Remove(dm.LogFileName)
+func cleanupDiskManager(dm *DiskManager) {
+	dm.DBFile.Close()
+	dm.LogFile.Close()
+	if err := os.Remove(dm.DBFileName); err != nil {
+		panic(err)
+	}
+	if err := os.Remove(dm.LogFileName); err != nil {
+		panic(err)
+	}
 	dm.ShutDown()
 }
 
@@ -46,7 +50,7 @@ func TestBufferPool(t *testing.T) {
 	poolSize := 3
 	pageSize := 4096
 	k := 2
-	bm := NewManager(dm, poolSize, pageSize, k)
+	bm := NewBufferPoolManager(dm, poolSize, pageSize, k)
 
 	// 测试 FetchPage
 	pageID := 1
